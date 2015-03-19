@@ -10,18 +10,25 @@
 class AnalyzeASTConsumer : public clang::ASTConsumer {
 public:
 	AnalyzeASTConsumer(clang::ASTContext *Context) { }
+
+	virtual void HandleTranslationUnit(clang::ASTContext &Ctx) {
+		std::cout << "HandleTranslationUnit\n";
+	}
 };
 
 class AnalyzeASTAction : public clang::ASTFrontendAction {
 public:
 	virtual clang::ASTConsumer* CreateASTConsumer(
-		clang::CompilerInstance &Compiler, llvm::StringRef InFile) {
-		std::cout << "Hello, clang!\n";
+			clang::CompilerInstance &Compiler, llvm::StringRef InFile) {
 		return new AnalyzeASTConsumer(&Compiler.getASTContext());
 	}
 };
 
-int main(void) {
-	std::cout << "Hello, world\n";
+int main(int argc, char **argv) {
+	if (argc > 1) {
+		clang::tooling::runToolOnCode(new AnalyzeASTAction(), argv[1]);
+	}
 	return 0;
 }
+
+// vim:ts=4:

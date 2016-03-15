@@ -1,3 +1,4 @@
 /ASTAnalyzer
 /*.o
 *.swp
+/nbproject/private

@@ -15,6 +15,11 @@ public:
 		std::cout << Declaration->getQualifiedNameAsString();
 		return true;
 	}
+	
+	bool VisitFunctionDecl(clang::FunctionDecl* D) {
+		std::cout << "Function decl: " << D->getDeclName().getAsString() << std::endl;
+		return true;
+	}
 
 };
 

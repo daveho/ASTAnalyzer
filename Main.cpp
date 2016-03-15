@@ -1,6 +1,7 @@
 #include <iostream>
 #include <fstream>
 #include <memory>
+#include <vector>
 
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/ASTConsumer.h"
@@ -10,22 +11,56 @@
 #include "clang/Tooling/Tooling.h"
 
 class ASTAnalyzer : public clang::RecursiveASTVisitor<ASTAnalyzer> {
+private:
+	std::vector<bool> m_enable;
+	std::string m_targetFunctionName;
+	
+	bool isEnabled() const { return m_enable.back(); }
+	
 public:
-	bool VisitCXXRecordDecl(clang::CXXRecordDecl *Declaration) {
-		std::cout << Declaration->getQualifiedNameAsString();
+	typedef clang::RecursiveASTVisitor<ASTAnalyzer> Base;
+	
+	ASTAnalyzer(const std::string &targetFunctionName)
+		: m_targetFunctionName(targetFunctionName) {
+		m_enable.push_back(false);
+	}
+	
+//	bool VisitCXXRecordDecl(clang::CXXRecordDecl *Declaration) {
+//		std::cout << Declaration->getQualifiedNameAsString();
+//		return true;
+//	}
+	
+	bool VisitFunctionDecl(clang::FunctionDecl* D) {
+		if (isEnabled()) {
+			std::string funcName = D->getDeclName().getAsString();
+			std::cout << "Visiting: " << funcName << std::endl;
+		}
+		
 		return true;
 	}
 	
-	bool VisitFunctionDecl(clang::FunctionDecl* D) {
-		std::cout << "Function decl: " << D->getDeclName().getAsString() << std::endl;
+	bool VisitCompoundStmt(clang::CompoundStmt *S) {
+		std::cout << "Visiting compound statement, enabled=" << isEnabled() << std::endl;
 		return true;
+	}
+	
+	bool TraverseFunctionDecl(clang::FunctionDecl *D) {
+		std::string funcName = D->getDeclName().getAsString();
+
+		m_enable.push_back(funcName == m_targetFunctionName);
+		bool result = Base::TraverseFunctionDecl(D);
+		m_enable.pop_back();
+		
+		return result;
 	}
 
 };
 
 class AnalyzeASTConsumer : public clang::ASTConsumer {
 public:
-	AnalyzeASTConsumer(clang::ASTContext *Context) { }
+	AnalyzeASTConsumer(clang::ASTContext *Context, const std::string &targetFunctionName)
+		: m_analyzer(targetFunctionName)
+	{ }
 
 	virtual void HandleTranslationUnit(clang::ASTContext &Ctx) {
 		std::cout << "HandleTranslationUnit\n";
@@ -38,10 +73,15 @@ private:
 };
 
 class AnalyzeASTAction : public clang::ASTFrontendAction {
+private:
+	std::string m_targetFunctionName;
+	
 public:
+	AnalyzeASTAction(const std::string &targetFunctionName) : m_targetFunctionName(targetFunctionName) { }
+	
 	virtual clang::ASTConsumer* CreateASTConsumer(
 			clang::CompilerInstance &Compiler, llvm::StringRef InFile) {
-		return new AnalyzeASTConsumer(&Compiler.getASTContext());
+		return new AnalyzeASTConsumer(&Compiler.getASTContext(), m_targetFunctionName);
 	}
 };
 
@@ -63,7 +103,7 @@ char *loadFileIntoMemory(const char *fileName) {
 int main(int argc, char **argv) {
 	if (argc > 1) {
 		char *code = loadFileIntoMemory(argv[1]);
-		clang::tooling::runToolOnCode(new AnalyzeASTAction(), code);
+		clang::tooling::runToolOnCode(new AnalyzeASTAction("main"), code);
 		delete[] code;  // not really necessary, but whatever
 	}
 	return 0;

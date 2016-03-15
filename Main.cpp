@@ -30,17 +30,17 @@ public:
 //		return true;
 //	}
 	
-	bool VisitFunctionDecl(clang::FunctionDecl* D) {
-		if (isEnabled()) {
-			std::string funcName = D->getDeclName().getAsString();
-			std::cout << "Visiting: " << funcName << std::endl;
-		}
-		
-		return true;
-	}
+//	bool VisitFunctionDecl(clang::FunctionDecl* D) {
+//		if (isEnabled()) {
+//			std::string funcName = D->getDeclName().getAsString();
+//			std::cout << "Visiting: " << funcName << std::endl;
+//		}
+//		
+//		return true;
+//	}
 	
 	bool VisitCompoundStmt(clang::CompoundStmt *S) {
-		std::cout << "Visiting compound statement, enabled=" << isEnabled() << std::endl;
+		//std::cout << "Visiting compound statement, enabled=" << isEnabled() << std::endl;
 		return true;
 	}
 	
@@ -53,6 +53,40 @@ public:
 		
 		return result;
 	}
+	
+	bool TraverseWhileStmt(clang::WhileStmt *S) {
+		if (isEnabled()) {
+			// For now, traverse ONLY the body (not the condition)
+			std::cout << "while{";
+			TraverseStmt(S->getBody());
+			std::cout << "}";
+		}
+		return true;
+	}
+	
+	bool TraverseForStmt(clang::ForStmt *S) {
+		if (isEnabled()) {
+			// For now, traverse ONLY the body (not the initialization/condition/update)
+			std::cout << "for{";
+			TraverseStmt(S->getBody());
+			std::cout << "}";
+		}
+		return true;
+	}
+	
+	bool TraverseIfStmt(clang::IfStmt *S) {
+		if (isEnabled()) {
+			std::cout << "if{";
+			TraverseStmt(S->getThen());
+			std::cout << "}";
+			if (S->getElse()) {
+				std::cout << "else{";
+				TraverseStmt(S->getElse());
+				std::cout << "}";
+			}
+		}
+		return true;
+	}
 
 };
 
@@ -63,7 +97,7 @@ public:
 	{ }
 
 	virtual void HandleTranslationUnit(clang::ASTContext &Ctx) {
-		std::cout << "HandleTranslationUnit\n";
+		//std::cout << "HandleTranslationUnit\n";
 
 		m_analyzer.TraverseDecl(Ctx.getTranslationUnitDecl());
 	}
